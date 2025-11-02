@@ -25,11 +25,11 @@ pub fn read_string(allocator: std.mem.Allocator) !u32 {
     return alloc.written();
 }
 
-pub fn read_integer() !u32 {
+pub fn read_integer() !usize {
     var buf: [25]u8 = undefined;
     var reader = std.fs.File.stdin().reader(&buf);
     const num_str = reader.interface.takeDelimiterExclusive('\n') catch return error.UnexpectedEos;
-    return try std.fmt.parseInt(u32, num_str, 10);
+    return try std.fmt.parseInt(usize, num_str, 10);
 }
 
 pub fn fetch_versions(repo: types.repository, allocator: std.mem.Allocator) !std.ArrayList([]const u8) {
@@ -362,4 +362,25 @@ pub fn parse_zigp_zon(allocator: std.mem.Allocator, content: [:0]const u8) !type
     }
 
     return result;
+}
+
+pub fn range_input_taker(
+    lower_range_inclusive: usize,
+    upper_range_inclusive: usize,
+) usize {
+    while (true) {
+        std.debug.print("{s}>>>{s} ", .{ ansi.BRIGHT_CYAN, ansi.RESET });
+
+        const user_select_number = read_integer() catch {
+            std.debug.print("{s}Invalid input recieved.{s}", .{ ansi.BRIGHT_RED, ansi.RESET });
+            continue;
+        };
+
+        if (user_select_number < lower_range_inclusive or user_select_number > upper_range_inclusive) {
+            std.debug.print("{s}Error:{s} Number selection is out of range.\n", .{ ansi.RED ++ ansi.BOLD, ansi.RESET });
+            continue;
+        }
+
+        return user_select_number;
+    }
 }

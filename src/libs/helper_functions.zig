@@ -10,6 +10,13 @@ const tar_file_url = "https://github.com/{s}/archive/refs/tags/{s}.tar.gz";
 
 const in = std.fs.File.stdin();
 
+pub fn file_exists(file: []const u8) bool {
+    var dir = std.fs.cwd().openDir(".", .{}) catch return false;
+    defer dir.close();
+    dir.access(file, .{}) catch return false;
+    return true;
+}
+
 pub fn read_string(allocator: std.mem.Allocator) !u32 {
     var bufr = std.mem.zeroes([500]u8);
     var r = in.reader(&bufr);
@@ -21,7 +28,7 @@ pub fn read_string(allocator: std.mem.Allocator) !u32 {
 pub fn read_integer() !u32 {
     var buf: [25]u8 = undefined;
     var reader = std.fs.File.stdin().reader(&buf);
-    const num_str =  reader.interface.takeDelimiterExclusive('\n') catch return error.UnexpectedEos;
+    const num_str = reader.interface.takeDelimiterExclusive('\n') catch return error.UnexpectedEos;
     return try std.fmt.parseInt(u32, num_str, 10);
 }
 
@@ -34,10 +41,11 @@ pub fn fetch_versions(repo: types.repository, allocator: std.mem.Allocator) !std
     var buf: [MAX_ALLOWED_REPO_NAME_LENGTH]u8 = undefined;
     const fetch_url = try std.fmt.bufPrintZ(&buf, releases_url, .{repo.full_name});
 
+    var response = std.Io.Writer.Allocating.init(allocator);
+
     var client = std.http.Client{ .allocator = allocator };
     defer client.deinit();
 
-    var response = std.Io.Writer.Allocating.init(allocator);
     defer response.deinit();
 
     const result = try client.fetch(.{

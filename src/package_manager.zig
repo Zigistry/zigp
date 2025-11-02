@@ -10,6 +10,18 @@ const tar_file_url = "https://github.com/{s}/archive/refs/tags/{s}.tar.gz";
 // https://github.com/{}/archive/refs/tags/{}.tar.gz
 
 pub fn add_package(repo: types.repository, allocator: std.mem.Allocator) !void {
+    if (!hfs.file_exists("zigp.zon")) {
+        std.debug.print("{s}zigp.zon not found{s}", .{ ansi.BRIGHT_RED, ansi.RESET });
+        std.debug.print("{s}Info:{s} please run {s}zigp init{s} to create one.", .{ ansi.BRIGHT_CYAN, ansi.RESET, ansi.BRIGHT_YELLOW, ansi.RESET });
+        return;
+    }
+
+    if (!hfs.file_exists("build.zig.zon")) {
+        std.debug.print("{s}build.zig.zon not found{s}", .{ ansi.BRIGHT_RED, ansi.RESET });
+        std.debug.print("{s}Info:{s} please run {s}zig init{s} to create one.", .{ ansi.BRIGHT_CYAN, ansi.RESET, ansi.BRIGHT_YELLOW, ansi.RESET });
+        return;
+    }
+
     var versions = hfs.fetch_versions(repo, allocator) catch return;
     const versions_list = versions.items;
 
@@ -144,7 +156,7 @@ pub fn add_package(repo: types.repository, allocator: std.mem.Allocator) !void {
                                 .version = try std.fmt.allocPrint(allocator, "%master#{s}", .{commit_hash}),
                             });
                         }
-                        var response = std.Io.Writer.Allocating.init(allocator);
+                        var response: std.Io.Writer.Allocating = .init(allocator);
                         defer response.deinit();
                         std.debug.print("{s}", .{try types.zigp_zon_to_string(zigp_zon_parsed, allocator)});
 
@@ -165,17 +177,83 @@ pub fn add_package(repo: types.repository, allocator: std.mem.Allocator) !void {
             },
         }
     } else {
-        const tag_to_install = try switch (user_select_number) {
-            1 => std.fmt.allocPrint(allocator, "git+https://github.com/{s}", .{repo.full_name}),
-            else => std.fmt.allocPrint(allocator, tar_file_url, .{ repo.full_name, versions_list[user_select_number - 2] }),
-        };
+        const tag_to_install = try std.fmt.allocPrint(allocator, tar_file_url, .{ repo.full_name, versions_list[user_select_number - 2] });
 
         std.debug.print("{s}Adding package: {s}{s}{s}\n", .{ ansi.BRIGHT_YELLOW, ansi.UNDERLINE, versions_list[user_select_number - 2], ansi.RESET });
+
+        var new_process2 = std.process.Child.init(&[_][]const u8{ "zig", "fetch", tag_to_install }, allocator);
+        new_process2.stdout_behavior = .Pipe;
+        try new_process2.spawn();
+        const asdf = try new_process2.stdout.?.readToEndAlloc(allocator, std.math.maxInt(usize));
+        const new_terminal2 = try new_process2.wait();
+
+        switch (new_terminal2.Exited) {
+            0 => {},
+            else => {
+                std.debug.print("ERRRORRR!!!!", .{});
+                return;
+            },
+        }
+
+        var iter = std.mem.splitScalar(u8, asdf, '-');
+        const name = iter.next().?;
 
         var process: std.process.Child = .init(&[_][]const u8{ "zig", "fetch", "--save", tag_to_install }, allocator);
         const term = try process.spawnAndWait();
         switch (term.Exited) {
             0 => {
+                const file = try std.fs.cwd().openFile("./zigp.zon", .{});
+                defer file.close();
+
+                // Read entire file into memory
+                const data = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+                defer allocator.free(data);
+
+                const asdfff = try allocator.dupeZ(u8, data);
+
+                var new_process: std.process.Child = .init(&[_][]const u8{ "zig", "fetch", "--save", tag_to_install }, allocator);
+                new_process.stderr_behavior = .Pipe;
+
+                try new_process.spawn();
+
+                const thing = try new_process.stderr.?.readToEndAlloc(allocator, std.math.maxInt(usize));
+
+
+                const index = std.mem.indexOf(u8, thing, " to commit ") orelse return error.no_internet;
+
+                const remaining_thing = thing[index + " to commit ".len ..];
+                var iter5 = std.mem.splitScalar(u8, remaining_thing, '\n');
+                std.debug.print("\n\nImportant thing:{s}\n\n", .{thing});
+
+                const commit_hash = iter5.next().?;
+
+                var zigp_zon_parsed = try hfs.parse_zigp_zon(allocator, asdfff);
+                var iter2 = zigp_zon_parsed.dependencies.iterator();
+
+                var dependency_existed_and_changed = false;
+                while (iter2.next()) |dependency| {
+                    if (std.mem.eql(u8, dependency.key_ptr.*, name)) {
+                        // dependecy with same name already existed.
+                        // we'll basically add the latest version to it.
+                        dependency.value_ptr.owner_name.? = repo.owner;
+                        dependency.value_ptr.repo_name.? = repo.name;
+                        dependency.value_ptr.provider = repo.provider;
+                        dependency.value_ptr.version.? = try std.fmt.allocPrint(allocator, "%master#{s}", .{commit_hash});
+                        dependency_existed_and_changed = true;
+                    }
+                }
+
+                if (!dependency_existed_and_changed) {
+                    try zigp_zon_parsed.dependencies.put(allocator, name, .{
+                        .owner_name = repo.owner,
+                        .repo_name = repo.name,
+                        .provider = repo.provider,
+                        .version = try std.fmt.allocPrint(allocator, "%master#{s}", .{commit_hash}),
+                    });
+                }
+                var response: std.Io.Writer.Allocating = .init(allocator);
+                defer response.deinit();
+                std.debug.print("{s}", .{try types.zigp_zon_to_string(zigp_zon_parsed, allocator)});
                 std.debug.print("{s}Successfully installed {s}.{s}\n", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, repo.full_name, ansi.RESET });
                 std.debug.print("{s}✧ Suggestion:{s}\n", .{ ansi.BRIGHT_MAGENTA ++ ansi.BOLD, ansi.RESET });
                 std.debug.print("You can add these lines to your build.zig (just above the b.installArtifact(exe) line).\n\n", .{});

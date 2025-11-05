@@ -2,6 +2,13 @@ const std = @import("std");
 
 const Providers = enum { GitHub, CodeBerg, GitLab };
 
+pub const semver = struct {
+    major: u32,
+    minor: u32,
+    patch: u32,
+    remaining: []const u8,
+};
+
 pub const repository = struct {
     provider: Providers,
     owner: []const u8,
@@ -34,6 +41,10 @@ pub const build_zig_zon = struct {
         lazy: ?bool = null,
     };
 };
+
+pub fn semver_to_string(input_semver: semver, allocator: std.mem.Allocator) ![]const u8 {
+    return try std.fmt.allocPrint(allocator, "{}.{}.{}", .{ input_semver.major, input_semver.minor, input_semver.patch });
+}
 
 pub fn zigp_zon_to_string(data: zigp_zon, allocator: std.mem.Allocator) ![]const u8 {
     var result: std.array_list.Aligned(u8, null) = .empty;

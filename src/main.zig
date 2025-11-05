@@ -1,6 +1,9 @@
 const std = @import("std");
 const display = @import("libs/display.zig");
-const package_manager = @import("package_manager.zig");
+const add_package = @import("./packages/add.zig");
+const update_package = @import("./packages/update.zig");
+const info_package = @import("./packages/info.zig");
+const program_manager = @import("./programs/install.zig");
 const types = @import("types.zig");
 const hfs = @import("./libs/helper_functions.zig");
 
@@ -9,17 +12,15 @@ inline fn eql(x: []const u8, y: []const u8) bool {
 }
 
 fn self_update(allocator: std.mem.Allocator) !void {
-    var process = std.process.Child.init(&[_][]const u8{
+    const update_command_result = try hfs.run_cli_command(&.{
         "sh",
         "-c",
         "curl https://raw.githubusercontent.com/zigistry/zigp/main/install_script.sh -sSf | sh",
-    }, allocator);
-
-    const result = try process.spawnAndWait();
-    switch (result.Exited) {
+    }, allocator, .no_read);
+    switch (update_command_result.Exited) {
         0 => display.success.completed_self_update(),
         1 => display.err.failed_self_update(),
-        else => display.err.unexpected_failed_self_update(result.Exited),
+        else => display.err.unexpected_failed_self_update(update_command_result.Exited),
     }
 }
 
@@ -81,10 +82,10 @@ pub fn main() !void {
                 return;
             }
             // ====================================================
-            try package_manager.install_app(repo, allocator);
+            try program_manager.install_app(repo, allocator);
         } else if (eql(args[1], "update")) {
             if (eql(args[2], "all")) {
-                try package_manager.update_packages(allocator);
+                try update_package.update_packages(allocator);
             }
         } else if (eql(args[1], "add")) {
             const repo = hfs.query_to_repo(args[2]) catch |err| switch (err) {
@@ -107,7 +108,7 @@ pub fn main() !void {
                 return;
             }
             // ====================================================
-            try package_manager.add_package(repo, allocator);
+            try add_package.add_package(repo, allocator);
         } else if (eql(args[1], "info")) {
             const repo = hfs.query_to_repo(args[2]) catch |err| switch (err) {
                 error.unknown_provider => {
@@ -128,7 +129,7 @@ pub fn main() !void {
                 display.err.unknown_provider();
                 return;
             }
-            try package_manager.info(repo, allocator);
+            try info_package.info(repo, allocator);
         } else display.err.unknown_argument(args[2]),
 
         // args[0]  args[1]     args[2]         args[3]

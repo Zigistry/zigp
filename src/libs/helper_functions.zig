@@ -10,6 +10,82 @@ const tar_file_url = "https://github.com/{s}/archive/refs/tags/{s}.tar.gz";
 
 const in = std.fs.File.stdin();
 
+pub fn clean_and_parse_semver(sermver_as_string_: []const u8) !types.semver {
+    var semver_as_string = sermver_as_string_;
+    if (semver_as_string[0] == 'v') {
+        semver_as_string = sermver_as_string_[1..];
+    }
+    var iter = std.mem.splitAny(u8, semver_as_string, ".+-");
+
+    const major = if (iter.next()) |major| major else return error.invalid_semver_recieved;
+    const minor = if (iter.next()) |minor| minor else return error.invalid_semver_recieved;
+    const patch = if (iter.next()) |patch| patch else return error.invalid_semver_recieved;
+
+    return .{
+        .major = try std.fmt.parseInt(u32, major, 10),
+        .minor = try std.fmt.parseInt(u32, minor, 10),
+        .patch = try std.fmt.parseInt(u32, patch, 10),
+        .remaining = iter.rest(),
+    };
+}
+
+test "parse_semver" {
+    const res = try clean_and_parse_semver("0.0.0");
+    const res2 = try clean_and_parse_semver("v0.0.0");
+    const res3 = try clean_and_parse_semver("1.0.0+exp.sha.5114f85");
+    const res4 = try clean_and_parse_semver("200.000.900+exp.sha.5114f85");
+
+    std.debug.print("{any}\n", .{res});
+    std.debug.print("{any}\n", .{res2});
+    std.debug.print("{any}\n", .{res3});
+    std.debug.print("{any}\n", .{res4});
+}
+
+pub fn parse_hash(hash: []const u8) !struct {
+    package_name: []const u8,
+    version: types.semver,
+} {
+    var iter = std.mem.splitScalar(u8, hash, '-');
+    const name = iter.next().?;
+    const version = iter.next().?; // I don't think i'll use build.zig.zon's version.
+
+    return .{
+        .package_name = name,
+        .version = try clean_and_parse_semver(version),
+    };
+}
+
+pub fn run_cli_command(
+    command: []const []const u8,
+    allocator: std.mem.Allocator,
+    mode: enum { stdout, stderr, no_read },
+) !struct {
+    text: []const u8,
+    Exited: u8,
+} {
+    var process: std.process.Child = .init(command, allocator);
+
+    switch (mode) {
+        .stdout => process.stdout_behavior = .Pipe,
+        .stderr => process.stderr_behavior = .Pipe,
+        .no_read => {},
+    }
+
+    try process.spawn();
+
+    const result =
+        switch (mode) {
+            .stdout => try process.stdout.?.readToEndAlloc(allocator, std.math.maxInt(usize)),
+            .stderr => try process.stderr.?.readToEndAlloc(allocator, std.math.maxInt(usize)),
+            .no_read => "",
+        };
+
+    return .{
+        .Exited = (try process.wait()).Exited,
+        .text = result,
+    };
+}
+
 pub fn print_suggestion(repo: types.repository) void {
     std.debug.print("{s}Successfully installed {s}.{s}\n", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, repo.full_name, ansi.RESET });
     std.debug.print("{s}✧ Suggestion:{s}\n", .{ ansi.BRIGHT_MAGENTA ++ ansi.BOLD, ansi.RESET });
@@ -42,7 +118,7 @@ pub fn read_integer() !usize {
     return try std.fmt.parseInt(usize, num_str, 10);
 }
 
-pub fn fetch_versions(repo: types.repository, allocator: std.mem.Allocator) !std.ArrayList([]const u8) {
+pub fn fetch_versions(repo: types.repository, allocator: std.mem.Allocator) ![][]const u8 {
     // I am doing -2 for making sure {} is not included.
     if (releases_url.len + repo.full_name.len - 2 > MAX_ALLOWED_REPO_NAME_LENGTH) {
         @panic("The length of repo name is way too much long.");
@@ -98,11 +174,11 @@ pub fn fetch_versions(repo: types.repository, allocator: std.mem.Allocator) !std
         }
     }
 
-    return list;
+    return try list.toOwnedSlice(allocator);
 }
 
 //  https://api.github.com/repos/rohanvashisht1234/zorsig/branches
-pub fn fetch_branches(repo: types.repository, allocator: std.mem.Allocator) !std.ArrayList([]const u8) {
+pub fn fetch_branches(repo: types.repository, allocator: std.mem.Allocator) ![][]const u8 {
     // I am doing -2 for making sure {} is not included.
     if (branches_url.len + repo.full_name.len - 2 > MAX_ALLOWED_REPO_NAME_LENGTH) {
         @panic("The length of repo name is way too much long.");
@@ -157,7 +233,7 @@ pub fn fetch_branches(repo: types.repository, allocator: std.mem.Allocator) !std
         }
     }
 
-    return list;
+    return try list.toOwnedSlice(allocator);
 }
 
 pub fn url_to_repo_format(url_link: []const u8, allocator: std.mem.Allocator) !types.repository {
@@ -222,14 +298,13 @@ pub fn fetch_info_from_github(repo: types.repository, allocator: std.mem.Allocat
         },
     }
 
-    var buf: [2000]u8 = undefined;
+    const fetch_url = try allocator.dupeZ(u8, try std.fmt.allocPrint(allocator, "https://api.github.com/repos/{s}", .{repo.full_name}));
+    defer allocator.free(fetch_url);
 
-    const fetch_url = try std.fmt.bufPrintZ(&buf, "https://api.github.com/repos/{s}", .{repo.full_name});
-
-    var client = std.http.Client{ .allocator = allocator };
+    var client: std.http.Client = .{ .allocator = allocator };
     defer client.deinit();
 
-    var response = std.Io.Writer.Allocating.init(allocator);
+    var response: std.Io.Writer.Allocating = .init(allocator);
     defer response.deinit();
 
     const result = try client.fetch(.{

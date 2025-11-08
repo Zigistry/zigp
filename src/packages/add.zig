@@ -35,10 +35,6 @@ fn add_package_branch(repo: types.repository, allocator: std.mem.Allocator) !voi
 
             switch (process_to_get_commit_hash.Exited) {
                 0 => {
-                    const index = std.mem.indexOf(u8, process_to_get_commit_hash.text, " to commit ") orelse return error.no_internet;
-
-                    const hash = process_to_get_commit_hash.text[index + " to commit ".len ..];
-                    var iter5 = std.mem.splitScalar(u8, hash, '\n');
                     const file = try std.fs.cwd().openFile("./zigp.zon", .{ .mode = .read_write });
                     defer file.close();
 
@@ -48,7 +44,6 @@ fn add_package_branch(repo: types.repository, allocator: std.mem.Allocator) !voi
 
                     const zigp_raw_data = try allocator.dupeZ(u8, data_u8);
                     defer allocator.free(zigp_raw_data);
-                    const commit_hash = iter5.next().?;
 
                     var zigp_zon_parsed = try hfs.parse_zigp_zon(allocator, zigp_raw_data);
                     defer {
@@ -65,7 +60,7 @@ fn add_package_branch(repo: types.repository, allocator: std.mem.Allocator) !voi
                         .owner_name = repo.owner,
                         .repo_name = repo.name,
                         .provider = repo.provider,
-                        .version = try std.fmt.allocPrint(allocator, "%{s}#{s}", .{ branches_list[user_branch_input - 1], commit_hash }),
+                        .version = try std.fmt.allocPrint(allocator, "%{s}", .{branches_list[user_branch_input - 1]}),
                     });
                     defer allocator.free(zigp_zon_parsed.dependencies.get(details_from_hash.package_name).?.version.?);
                     try file.seekTo(0);

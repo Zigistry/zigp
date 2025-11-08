@@ -10,6 +10,24 @@ const tar_file_url = "https://github.com/{s}/archive/refs/tags/{s}.tar.gz";
 
 const in = std.fs.File.stdin();
 
+pub fn semver_parse_range_based(input: []const u8) struct {
+    min: types.semver,
+    max: types.semver,
+} {
+    const versions = std.mem.splitSequence(u8, input, "...");
+    const min = try clean_and_parse_semver(versions.next().?);
+    const max = try clean_and_parse_semver(versions.next().?);
+    return .{ .max = max, .min = min };
+}
+
+pub inline fn semver_tilde_max_range(base: types.semver) types.semver {
+    return .{
+        .major = base.major,
+        .minor = base.minor + 1,
+        .patch = 0,
+    };
+}
+
 pub fn semver_caret_max_range(x: types.semver) types.semver {
     var max = x;
     if (x.major > 0) {
@@ -46,8 +64,11 @@ pub fn get_versioning_type(version: []const u8) types.update {
             },
             else => @panic("unable to parse"),
         },
-        '>', '<' => .range_based_versioning,
-        else => unreachable,
+        else => {
+            if (std.mem.containsAtLeast(u8, version, 1, "...")) |_| {
+                return .range_based_versioning;
+            } else @panic("unable to parse");
+        },
     };
 }
 

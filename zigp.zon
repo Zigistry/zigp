@@ -12,7 +12,7 @@
             .owner_name = "capy-ui",
             .repo_name = "capy",
             .provider = .GitHub,
-            .version = "%master#bb12dab974a310b737acbaa6649cc2f2f8f8455f",
+            .version = "%master",
         },
         .zap = .{
             .owner_name = "zigzap",

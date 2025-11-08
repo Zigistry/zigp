@@ -10,11 +10,11 @@ const tar_file_url = "https://github.com/{s}/archive/refs/tags/{s}.tar.gz";
 
 const in = std.fs.File.stdin();
 
-pub fn semver_parse_range_based(input: []const u8) struct {
+pub fn semver_parse_range_based(input: []const u8) !struct {
     min: types.semver,
     max: types.semver,
 } {
-    const versions = std.mem.splitSequence(u8, input, "...");
+    var versions = std.mem.splitSequence(u8, input, "...");
     const min = try clean_and_parse_semver(versions.next().?);
     const max = try clean_and_parse_semver(versions.next().?);
     return .{ .max = max, .min = min };
@@ -25,6 +25,7 @@ pub inline fn semver_tilde_max_range(base: types.semver) types.semver {
         .major = base.major,
         .minor = base.minor + 1,
         .patch = 0,
+        .remaining = base.remaining,
     };
 }
 
@@ -49,6 +50,12 @@ pub fn semver_x_greater_than_y(x: types.semver, y: types.semver) bool {
     return x.patch > y.patch;
 }
 
+pub fn semver_x_greater_than_or_equal_y(x: types.semver, y: types.semver) bool {
+    if (x.major != y.major) return x.major > y.major;
+    if (x.minor != y.minor) return x.minor > y.minor;
+    return x.patch >= y.patch;
+}
+
 pub fn get_versioning_type(version: []const u8) types.update {
     return switch (version[0]) {
         '^' => .caret_range,
@@ -65,7 +72,7 @@ pub fn get_versioning_type(version: []const u8) types.update {
             else => @panic("unable to parse"),
         },
         else => {
-            if (std.mem.containsAtLeast(u8, version, 1, "...")) |_| {
+            if (std.mem.containsAtLeast(u8, version, 1, "...")) {
                 return .range_based_versioning;
             } else @panic("unable to parse");
         },

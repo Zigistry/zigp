@@ -85,7 +85,7 @@ pub fn update_packages(allocator: std.mem.Allocator) !void {
                 },
                 .latest_branching => {
                     std.debug.print("Latest branch: {s}\n", .{repo.full_name});
-                    var branch_iter = std.mem.splicScalar(u8, next.value_ptr.version.?, '%');
+                    var branch_iter = std.mem.splitScalar(u8, next.value_ptr.version.?, '%');
                     _ = branch_iter.next().?;
                     const branch_name = branch_iter.next().?;
                     std.debug.print("Branch name: {s}\n", .{branch_name});
@@ -99,7 +99,9 @@ pub fn update_packages(allocator: std.mem.Allocator) !void {
                             const process_to_get_commit_hash = try hfs.run_cli_command(&.{ "zig", "fetch", "--save", tag_to_install }, allocator, .stderr);
 
                             switch (process_to_get_commit_hash.Exited) {
-                                0 => {},
+                                0 => {
+                                    std.debug.print("{s}Updated: {s}{s}\n", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, repo.full_name, ansi.RESET });
+                                },
                                 else => return error.unknown,
                             }
                         },
@@ -134,12 +136,33 @@ pub fn update_packages(allocator: std.mem.Allocator) !void {
                 },
                 .range_based_versioning => {
                     std.debug.print("Ranged based versioning: {s}\n", .{repo.full_name});
-                    const semver_version_range = hfs.semver_tilde_max_range(try hfs.clean_and_parse_semver(next.value_ptr.version.?[1..]));
+                    const semver_version_range = try hfs.semver_parse_range_based(next.value_ptr.version.?);
                     const versions = try hfs.fetch_versions(repo, allocator);
+
+                    var selected_version_to_install_optional: ?[]const u8 = null;
+                    for (versions) |version| {
+                        const ver = hfs.clean_and_parse_semver(version) catch continue;
+
+                        if (hfs.semver_x_greater_than_or_equal_y(semver_version_range.max, ver) and hfs.semver_x_greater_than_or_equal_y(ver, semver_version_range.min)) {
+                            selected_version_to_install_optional = version;
+                            break;
+                        }
+                    }
+                    if (selected_version_to_install_optional) |selected_version_to_install| {
+                        const tar_file_url = "https://github.com/{s}/archive/refs/tags/{s}.tar.gz";
+                        const url_to_fetch = try std.fmt.allocPrint(allocator, tar_file_url, .{ repo_full_name, selected_version_to_install });
+                        const res = try hfs.run_cli_command(&.{ "zig", "fetch", try std.fmt.allocPrint(allocator, "--save={s}", .{dependency_name}), url_to_fetch }, allocator, .no_read);
+                        switch (res.Exited) {
+                            0 => std.debug.print("{s}Updated: {s}{s}\n", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, repo.full_name, ansi.RESET }),
+                            else => std.debug.print("{s}Error while doing zig fetch.{s}\n", .{ ansi.BRIGHT_RED ++ ansi.BOLD, ansi.RESET }),
+                        }
+                    } else {
+                        std.debug.print("{s} Couldn't find a version within specified range.\n", .{repo_full_name});
+                    }
                 },
                 .not_following_semver_name_exact_versioning, .exact_branching, .exact_versioning => {
                     // No need to update
-                    std.debug.print("No update: {s}\n", .{repo.full_name});
+                    std.debug.print("{s}{s}{s} has fixed version.\n", .{ ansi.BRIGHT_YELLOW ++ ansi.BOLD, repo.full_name, ansi.RESET });
                     //
                 },
             }

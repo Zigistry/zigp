@@ -1,24 +1,5 @@
 .{
     .zigp_version = "0.0.0",
-    .zig_version = "0.15.2",
-    .dependencies = .{
-        .zorsig = .{
-            .owner_name = "rohanvashisht1234",
-            .repo_name = "zorsig",
-            .provider = .GitHub,
-            .version = "|asdasdasd",
-        },
-        .capy = .{
-            .owner_name = "capy-ui",
-            .repo_name = "capy",
-            .provider = .GitHub,
-            .version = "%master",
-        },
-        .zap = .{
-            .owner_name = "zigzap",
-            .repo_name = "zap",
-            .provider = .GitHub,
-            .version = "^0.10.6",
-        },
-    },
+    .zig_version = "0.15.1",
+    .dependencies = .{},
 }

@@ -23,10 +23,15 @@ zigp add gh/<owner-name>/<repo-name>
 zigp add gh/capy-ui/capy
 ```
 
-#### Updating your zig project's build.zig.zon:
+#### Updating your zig project's build.zig.zon following zigp.zon:
 
 ```bash
 zigp update all
+```
+
+Update a specific dependency:
+```bash
+zigp update --specific zorsig
 ```
 
 #### Installing a program as a binary file (This will also export it to your $PATH):
@@ -110,3 +115,33 @@ zigp self-update
 - [x] Self update
 - [x] One step installation/addition
 - [ ] Proper debug/info/error messages (partially completed)
+
+
+
+Example zigp.zon:
+```zig
+.{
+    .zigp_version = "0.0.0",
+    .zig_version = "0.15.2",
+    .dependencies = .{
+        .zorsig = .{
+            .owner_name = "rohanvashisht1234",
+            .repo_name = "zorsig",
+            .provider = .GitHub,
+            .version = "|asdasdasd",
+        },
+        .capy = .{
+            .owner_name = "capy-ui",
+            .repo_name = "capy",
+            .provider = .GitHub,
+            .version = "%master",
+        },
+        .zap = .{
+            .owner_name = "zigzap",
+            .repo_name = "zap",
+            .provider = .GitHub,
+            .version = "0.9.0...0.10.6",
+        },
+    },
+}
+```

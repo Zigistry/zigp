@@ -1,20 +1,7 @@
 .{
     .name = .zigp,
     .version = "0.0.0",
-    .dependencies = .{
-        .zorsig = .{
-            .url = "https://github.com/rohanvashisht1234/zorsig/archive/refs/tags/asdasdasd.tar.gz",
-            .hash = "zorsig-0.0.1-AAAAAFgZAABK0y-goAY_tJzAcdU-itZpZiXxWGuU7Jww",
-        },
-        .zap = .{
-            .url = "https://github.com/zigzap/zap/archive/refs/tags/v0.10.6.tar.gz",
-            .hash = "zap-0.10.6-GoeB89aDJAAUufiqV7sUCudCoSSCle0E2fbw388bO1Ug",
-        },
-        .capy = .{
-            .url = "git+https://github.com/capy-ui/capy?ref=master#bb12dab974a310b737acbaa6649cc2f2f8f8455f",
-            .hash = "capy-0.4.1-kru7R1I2ZQS55Kk-HN_p8YDKCdkgGhmJe8f0Gq0djDfd",
-        },
-    },
+    .dependencies = .{},
     .fingerprint = 0x1879e3171df18555,
     .minimum_zig_version = "0.15.1",
     .paths = .{

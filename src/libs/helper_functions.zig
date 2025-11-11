@@ -88,11 +88,10 @@ pub fn yes_no_input_taker() bool {
 
 pub fn clean_and_parse_semver(sermver_as_string_: []const u8) !types.semver {
     var semver_as_string = sermver_as_string_;
-    if (semver_as_string[0] == 'v') {
+    if (semver_as_string[0] == 'v' or semver_as_string[0] == 'V') {
         semver_as_string = sermver_as_string_[1..];
     }
     var iter = std.mem.splitAny(u8, semver_as_string, ".+-");
-
     const major = if (iter.next()) |major| major else return error.invalid_semver_recieved;
     const minor = if (iter.next()) |minor| minor else return error.invalid_semver_recieved;
     const patch = if (iter.next()) |patch| patch else return error.invalid_semver_recieved;

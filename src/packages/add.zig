@@ -90,7 +90,10 @@ fn add_package_release_version(repo: types.repository, allocator: std.mem.Alloca
     const process_to_get_fetch_hash = try hfs.run_cli_command(&.{ "zig", "fetch", tag_to_install }, allocator, .stdout);
 
     switch (process_to_get_fetch_hash.Exited) {
-        0 => {},
+        0 => if (std.mem.startsWith(u8, process_to_get_fetch_hash.text, "N-V-")) {
+            std.debug.print("{s}Zig fetch returned a specific kind of hash which indicates the remote package doesn't has a build.zig.zon. Can't install this package.{s}\n", .{ ansi.BRIGHT_RED, ansi.RESET });
+            return;
+        },
         else => {
             std.debug.print("{s}Zig fetch returned an error!{s}", .{ ansi.BRIGHT_RED, ansi.RESET });
             return;

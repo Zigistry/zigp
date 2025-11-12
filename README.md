@@ -98,7 +98,6 @@ zigp self-update
 - Installing:
     - [x] Specific version
         - [x] Menu Driven (Choose the version to install from options)
-        - [ ] Direct addition like zigtools/zls@latest
     - [x] CLI tools (with exporting them to $PATH)
     - [ ] Complete Applications (--cask option to be implemented)
 - Updating:

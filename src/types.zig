@@ -9,6 +9,11 @@ pub const semver = struct {
     remaining: []const u8,
 };
 
+pub const details_from_hash = struct {
+    package_name: []const u8,
+    version: semver,
+};
+
 pub const repository = struct {
     provider: Providers,
     owner: []const u8,

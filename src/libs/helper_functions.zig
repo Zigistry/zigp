@@ -116,10 +116,7 @@ test "parse_semver" {
     std.debug.print("{any}\n", .{res4});
 }
 
-pub fn parse_hash(hash: []const u8) !struct {
-    package_name: []const u8,
-    version: types.semver,
-} {
+pub fn parse_hash(hash: []const u8) !types.details_from_hash {
     var iter = std.mem.splitScalar(u8, hash, '-');
     const name = iter.next().?;
     const version = iter.next().?; // I don't think i'll use build.zig.zon's version.
@@ -161,14 +158,20 @@ pub fn run_cli_command(
     };
 }
 
-pub fn print_suggestion(repo: types.repository) void {
-    std.debug.print("{s}Successfully installed {s}.{s}\n", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, repo.full_name, ansi.RESET });
+pub fn print_suggestion(details_from_hash: types.details_from_hash) void {
+    std.debug.print("{s}Successfully installed {s}.{s}\n", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, details_from_hash.package_name, ansi.RESET });
     std.debug.print("{s}✧ Suggestion:{s}\n", .{ ansi.BRIGHT_MAGENTA ++ ansi.BOLD, ansi.RESET });
     std.debug.print("You can add these lines to your build.zig (just above the b.installArtifact(exe) line).\n\n", .{});
     const suggestor =
         ansi.BRIGHT_BLUE ++ "const" ++ ansi.BRIGHT_CYAN ++ " {s} " ++ ansi.RESET ++ "= " ++ ansi.BRIGHT_CYAN ++ "b" ++ ansi.RESET ++ "." ++ ansi.BRIGHT_YELLOW ++ "dependency" ++ ansi.RESET ++ "(" ++ ansi.BRIGHT_GREEN ++ "\"{s}\"" ++ ansi.RESET ++ ", ." ++ ansi.BRIGHT_MAGENTA ++ "{{}}" ++ ansi.RESET ++ ");" ++ "\n" ++
         ansi.BRIGHT_CYAN ++ "exe" ++ ansi.RESET ++ "." ++ ansi.BRIGHT_BLUE ++ "root_module" ++ ansi.RESET ++ "." ++ ansi.BRIGHT_YELLOW ++ "addImport" ++ ansi.RESET ++ "(" ++ ansi.BRIGHT_GREEN ++ "\"{s}\"" ++ ansi.RESET ++ "," ++ ansi.BRIGHT_CYAN ++ " {s}" ++ ansi.RESET ++ "." ++ ansi.BRIGHT_YELLOW ++ "module" ++ ansi.RESET ++ "(" ++ ansi.BRIGHT_GREEN ++ "\"{s}\"" ++ ansi.RESET ++ "));\n";
-    std.debug.print(suggestor, .{ repo.name, repo.name, repo.name, repo.name, repo.name });
+    std.debug.print(suggestor, .{
+        details_from_hash.package_name,
+        details_from_hash.package_name,
+        details_from_hash.package_name,
+        details_from_hash.package_name,
+        details_from_hash.package_name,
+    });
 }
 
 pub fn file_exists(file: []const u8) bool {

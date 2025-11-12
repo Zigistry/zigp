@@ -1,0 +1,32 @@
+name: Release for all supported operating systems and architectures.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # All Setup:
+      - name: Install Zig
+        uses: jetsung/install-zig@v1
+        with:
+          version: "0.15.1"
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+      # Building for multiple platforms:
+      # Currently, ZigP only supports MacOS and Linux.
+      # - name: Windows
+      #   run: zig build -Dtarget=x86_64-linux
+      - name: MacOS Silicon
+        run: zig build -Dtarget=aarch64-macos
+      - name: MacOS 
+        run: zig build -Dtarget=x86_64-linux
+      - name: Linux
+        run: zig build -Dtarget=aarch64-linux
+        run: zig build -Dtarget=x86_64-linux
+        run: zig build -Dtarget=
+

@@ -17,6 +17,6 @@ pub fn init() !void {
         const file = try std.fs.cwd().createFile("./zigp.zon", .{});
         defer file.close();
         try file.writeAll(content);
-        std.debug.print("{s}Empty zig file has been created.{s}\n", .{ ansi.BRIGHT_GREEN, ansi.RESET });
+        std.debug.print("{s}Basic zigp.zon file has been created.{s}\n", .{ ansi.BRIGHT_GREEN, ansi.RESET });
     }
 }

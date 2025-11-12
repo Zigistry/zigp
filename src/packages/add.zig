@@ -69,7 +69,7 @@ fn add_package_branch(repo: types.repository, allocator: std.mem.Allocator) !voi
                     defer allocator.free(res);
                     try file.writeAll(res);
 
-                    hfs.print_suggestion(repo);
+                    hfs.print_suggestion(details_from_hash);
                 },
                 1 => std.debug.print("{s}Zig fetch returned an error. The process returned 1 exit code.{s}\n", .{ ansi.RED ++ ansi.BOLD, ansi.RESET }),
                 else => std.debug.print("{s}Zig fetch returned an unknown error. It returned {} exit code.{s}\n", .{ ansi.RED ++ ansi.BOLD, process_to_get_commit_hash.Exited, ansi.RESET }),
@@ -149,7 +149,7 @@ fn add_package_release_version(repo: types.repository, allocator: std.mem.Alloca
             defer allocator.free(res);
             try file.writeAll(res);
 
-            hfs.print_suggestion(repo);
+            hfs.print_suggestion(parsed_fetch_hash);
         },
         1 => std.debug.print("{s}Zig fetch returned an error. The process returned 1 exit code.{s}\n", .{ ansi.RED ++ ansi.BOLD, ansi.RESET }),
         else => std.debug.print("{s}Zig fetch returned an unknown error.{s}\n", .{ ansi.RED ++ ansi.BOLD, ansi.RESET }),
@@ -175,7 +175,7 @@ pub fn add_package(repo: types.repository, allocator: std.mem.Allocator) !void {
         allocator.free(item);
     };
 
-    std.debug.print("{s}Installing {s}{s}{s}\n", .{ ansi.YELLOW, ansi.UNDERLINE, repo.full_name, ansi.RESET });
+    std.debug.print("{s}Repository: {s}https://github.com/{s}{s}\n", .{ ansi.YELLOW, ansi.UNDERLINE, repo.full_name, ansi.RESET });
     std.debug.print("{s}Please select the version you want to install (type the index number):{s}\n", .{ ansi.BRIGHT_CYAN ++ ansi.BOLD, ansi.RESET });
 
     std.debug.print("1){s} Install a branch{s}\n", .{ ansi.BOLD, ansi.RESET });

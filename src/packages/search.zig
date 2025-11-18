@@ -233,7 +233,7 @@ fn print_packages(packages: []const Package) void {
         std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "License{s}: {s}\n", .{ ansi.RESET, pkg.license orelse "None" });
         std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Source{s}: {s}\n", .{ ansi.RESET, pkg.repo_from });
         std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Zig Version{s}: {s}\n", .{ ansi.RESET, pkg.zig_minimum_version });
-        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Build.zig{s}: {}, Build.zig.zon: {}\n", .{ ansi.RESET, pkg.has_build_zig, pkg.has_build_zig_zon });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Build.zig{s}: {}, {s}Build.zig.zon{s}: {}\n", .{ ansi.RESET, pkg.has_build_zig, ansi.BRIGHT_GREEN ++ ansi.BOLD, ansi.RESET, pkg.has_build_zig_zon });
 
         if (pkg.topics.len > 0) {
             std.debug.print("{s}Topics{s}: ", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, ansi.RESET });

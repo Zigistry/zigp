@@ -1,6 +1,44 @@
 const std = @import("std");
 const http = std.http;
 const json = std.json;
+const ansi = @import("../libs/ansi_codes.zig");
+
+fn month_num_to_month_name(month: u8) []const u8 {
+    return switch (month) {
+        1 => "Jan",
+        2 => "Feb",
+        3 => "Mar",
+        4 => "Apr",
+        5 => "May",
+        6 => "Jun",
+        7 => "Jul",
+        8 => "Aug",
+        9 => "Sep",
+        10 => "Oct",
+        11 => "Nov",
+        12 => "Dec",
+        else => "unknown month",
+    };
+}
+
+fn print_special_date_time(date: []const u8) struct {
+    year: []const u8,
+    month: []const u8,
+    day: []const u8,
+    hour: []const u8,
+    minutes: []const u8,
+    seconds: []const u8,
+} {
+    var my_iter = std.mem.splitAny(u8, date, "-:ZT");
+    return .{
+        .year = my_iter.next().?,
+        .month = my_iter.next().?,
+        .day = if (my_iter.next()) |day| if (day[0] == '0') day[1..] else day else unreachable,
+        .hour = my_iter.next().?,
+        .minutes = my_iter.next().?,
+        .seconds = my_iter.next().?,
+    };
+}
 
 // package response from zigistry
 const Package = struct {
@@ -30,7 +68,7 @@ pub fn search_packages(allocator: std.mem.Allocator, query: ?[]const u8, filter:
     var url_buffer: [512]u8 = undefined;
     const url = try build_search_url(&url_buffer, actual_query, actual_filter);
 
-    std.debug.print("Searching: {s}\n\n", .{url});
+    // std.debug.print("Searching: {s}\n\n", .{url});
 
     // Create HTTP client
     var client = http.Client{ .allocator = allocator };
@@ -184,29 +222,31 @@ fn print_packages(packages: []const Package) void {
         return;
     }
 
-    std.debug.print("Found {d} package(s):\n\n", .{packages.len});
+    std.debug.print(ansi.BRIGHT_GREEN ++ "Found {s}{d}{s} package(s):{s}\n\n", .{ ansi.UNDERLINE, packages.len, ansi.RESET ++ ansi.BRIGHT_GREEN, ansi.RESET });
 
     for (packages, 0..) |pkg, i| {
-        std.debug.print("--- Package {d} ---\n", .{i + 1});
-        std.debug.print("Name: {s}\n", .{pkg.name});
-        std.debug.print("Full Name: {s}\n", .{pkg.full_name});
-        std.debug.print("Description: {s}\n", .{pkg.description});
-        std.debug.print("Stars: {d}, Forks: {d}\n", .{ pkg.stargazers_count, pkg.forks_count });
-        std.debug.print("License: {s}\n", .{pkg.license orelse "None"});
-        std.debug.print("Source: {s}\n", .{pkg.repo_from});
-        std.debug.print("Zig Version: {s}\n", .{pkg.zig_minimum_version});
-        std.debug.print("Build.zig: {}, Build.zig.zon: {}\n", .{ pkg.has_build_zig, pkg.has_build_zig_zon });
+        std.debug.print(ansi.BRIGHT_YELLOW ++ "---{s} Package {d}{s} ---{s}\n", .{ ansi.RESET ++ ansi.BRIGHT_CYAN, i + 1, ansi.BRIGHT_YELLOW, ansi.RESET });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Name{s}: {s}\n", .{ ansi.RESET, pkg.name });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Full Name{s}: {s}\n", .{ ansi.RESET, pkg.full_name });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Description{s}: {s}\n", .{ ansi.RESET, pkg.description });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Stars{s}: {d}, {s}Forks{s}: {d}\n", .{ ansi.RESET, pkg.stargazers_count, ansi.BRIGHT_GREEN ++ ansi.BOLD, ansi.RESET, pkg.forks_count });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "License{s}: {s}\n", .{ ansi.RESET, pkg.license orelse "None" });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Source{s}: {s}\n", .{ ansi.RESET, pkg.repo_from });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Zig Version{s}: {s}\n", .{ ansi.RESET, pkg.zig_minimum_version });
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Build.zig{s}: {}, Build.zig.zon: {}\n", .{ ansi.RESET, pkg.has_build_zig, pkg.has_build_zig_zon });
 
         if (pkg.topics.len > 0) {
-            std.debug.print("Topics: ", .{});
+            std.debug.print("{s}Topics{s}: ", .{ ansi.BRIGHT_GREEN ++ ansi.BOLD, ansi.RESET });
             for (pkg.topics, 0..) |topic, j| {
                 if (j > 0) std.debug.print(", ", .{});
-                std.debug.print("{s}", .{topic});
+                std.debug.print(ansi.BRIGHT_CYAN ++ ansi.BOLD ++ ansi.UNDERLINE ++ "#{s}" ++ ansi.RESET, .{topic});
             }
             std.debug.print("\n", .{});
         }
 
-        std.debug.print("Updated: {s}\n", .{pkg.updated_at});
+        const data = print_special_date_time(pkg.updated_at);
+
+        std.debug.print(ansi.BRIGHT_GREEN ++ ansi.BOLD ++ "Updated{s}: {s}th of {s} {s} at {s}:{s}:{s}\n", .{ ansi.RESET, data.day, month_num_to_month_name(std.fmt.parseInt(u8, data.month, 10) catch 13), data.year, data.hour, data.minutes, data.seconds });
         std.debug.print("\n", .{});
     }
 }

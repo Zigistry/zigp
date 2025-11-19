@@ -21,3 +21,5 @@ fi
 
 cd ~
 echo "Done!"
+
+echo "Please star ⭐️ zigp repo: https://github.com/zigistry/zigp"

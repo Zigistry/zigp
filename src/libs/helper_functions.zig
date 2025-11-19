@@ -2,6 +2,7 @@ const std = @import("std");
 const ansi = @import("./ansi_codes.zig");
 const types = @import("../types.zig");
 const display = @import("display.zig");
+const builtin = @import("builtin");
 
 const MAX_ALLOWED_REPO_NAME_LENGTH = 2000;
 const releases_url = "https://api.github.com/repos/{s}/releases";
@@ -203,7 +204,11 @@ pub fn read_integer() !usize {
 
     // Windows terminal compatibility issues
     // Trim the carriage return
-    const num_str = std.mem.trim(u8, num_str_cr, " \r\n\t");
+    const delimiters = switch (builtin.target.os.tag) {
+        .windows => " \n\t",
+        else => " \r\n\t",
+    };
+    const num_str = std.mem.trim(u8, num_str_cr, delimiters);
 
     std.debug.print("\n", .{});
     const parsed_int = std.fmt.parseInt(usize, num_str, 10) catch |err| {
